@@ -1,0 +1,46 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    background-color: #FFF8F0;
+    color: #2D2D2D;
+    font-family: "PingFang SC", "Microsoft YaHei", "Helvetica Neue", sans-serif;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply bg-primary hover:bg-primary-dark text-white font-semibold
+           px-8 py-3 rounded-2xl shadow-lg
+           transition-all duration-200
+           hover:shadow-xl hover:-translate-y-0.5
+           active:translate-y-0;
+  }
+  .btn-secondary {
+    @apply bg-white hover:bg-orange-50 text-primary border-2 border-primary
+           font-semibold px-8 py-3 rounded-2xl
+           transition-all duration-200;
+  }
+  .card {
+    @apply bg-white rounded-2xl shadow-card hover:shadow-card-hover
+           transition-all duration-200
+           p-5;
+  }
+  .badge {
+    @apply inline-block text-xs font-medium px-2.5 py-0.5 rounded-full;
+  }
+  .badge-primary {
+    @apply bg-primary/10 text-primary;
+  }
+  .badge-accent {
+    @apply bg-accent/10 text-accent-dark;
+  }
+  .progress-bar {
+    @apply w-full h-2 rounded-full bg-gray-100 overflow-hidden;
+  }
+  .progress-fill {
+    @apply h-full rounded-full transition-all duration-500;
+  }
+}

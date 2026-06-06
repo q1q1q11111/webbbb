@@ -1,0 +1,27 @@
+{
+  "version": 2,
+  "name": "canteen-advisor-frontend",
+  "builds": [
+    {
+      "src": "frontend/package.json",
+      "use": "@vercel/static-build",
+      "config": {
+        "buildCommand": "cd frontend && npm install && npm run build",
+        "outputDirectory": "dist"
+      }
+    }
+  ],
+  "routes": [
+    {
+      "src": "/api/(.*)",
+      "dest": "https://your-backend.onrender.com/api/$1"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/$1"
+    }
+  ],
+  "env": {
+    "REACT_APP_API_URL": "@your-backend.onrender.com/api"
+  }
+}
