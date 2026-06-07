@@ -35,8 +35,9 @@ export default function Profile() {
   const handleLogout = () => {
     localStorage.removeItem("user_id");
     localStorage.removeItem("username");
-    window.location.reload();
+    window.location.href = "/";
   };
+
 
   const handleUnlike = async (dishId: number) => {
     try {
