@@ -39,6 +39,58 @@ async def list_canteens(db = Depends(get_db)):
     return [dict(r) for r in rows]
 
 
+@router.get("/menu")
+async def today_menu(user_id: int = 0, db = Depends(get_db)):
+    """获取今日菜单：按食堂分组展示所有可点菜品，含点赞数和当前用户是否已点赞"""
+    # 获取所有食堂
+    canteens_cursor = db.execute("SELECT * FROM canteens ORDER BY id")
+    canteens_rows = await canteens_cursor.fetchall()
+    canteens = [dict(r) for r in canteens_rows]
+
+    # 获取所有可点菜品
+    dishes_cursor = db.execute(
+        "SELECT d.*, c.name AS canteen_name FROM dishes d JOIN canteens c ON d.canteen_id=c.id WHERE d.is_available ORDER BY d.canteen_id, d.price"
+    )
+    dishes_rows = await dishes_cursor.fetchall()
+
+    # 获取每条菜品的点赞数
+    like_counts = {}
+    for d in dishes_rows:
+        lc = db.execute(
+            "SELECT COUNT(*) FROM user_feedback WHERE dish_id=? AND action='like'",
+            (d["id"],)
+        )
+        row = await lc.fetchone()
+        like_counts[d["id"]] = row[0] if row else 0
+
+    # 如果用户已登录，获取该用户点赞过的菜品 ID 列表
+    liked_ids = set()
+    if user_id:
+        liked_cursor = db.execute(
+            "SELECT dish_id FROM user_feedback WHERE user_id=? AND action='like'",
+            (user_id,)
+        )
+        liked_rows = await liked_cursor.fetchall()
+        liked_ids = {r["dish_id"] for r in liked_rows}
+
+    # 按食堂分组
+    result = []
+    for canteen in canteens:
+        canteen_dishes = []
+        for d in dishes_rows:
+            if d["canteen_id"] == canteen["id"]:
+                dish_dict = dict(d)
+                dish_dict["like_count"] = like_counts.get(d["id"], 0)
+                dish_dict["is_liked"] = d["id"] in liked_ids
+                canteen_dishes.append(dish_dict)
+        result.append({
+            **canteen,
+            "dishes": canteen_dishes
+        })
+
+    return result
+
+
 @router.get("/list")
 async def list_dishes(
     canteen_id: int = 0,
