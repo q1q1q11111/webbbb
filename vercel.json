@@ -1,17 +1,7 @@
 {
-  "version": 2,
-  "name": "canteen-advisor-frontend",
-  "builds": [
-    {
-      "src": "frontend/package.json",
-      "use": "@vercel/static-build",
-      "config": {
-        "buildCommand": "cd frontend && npm install && npm run build && echo '/*  /index.html  200' > dist/_redirects",
-        "outputDirectory": "dist"
-      }
-    }
-  ],
+  "buildCommand": "cd frontend && npm install && npm run build",
+  "outputDirectory": "frontend/dist",
   "rewrites": [
-    { "source": "/((?!assets).*)", "destination": "/index.html" }
+    { "source": "/(.*)", "destination": "/index.html" }
   ]
 }
