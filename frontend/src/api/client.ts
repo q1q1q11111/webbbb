@@ -1,7 +1,8 @@
 import axios from "axios";
 
-// 从环境变量获取 API 地址，如果没有则使用相对路径（适用于同源部署）
-const API_BASE_URL = process.env.REACT_APP_API_URL || "/api";
+// 从环境变量获取 API 地址（Vite 用 import.meta.env.VITE_ 前缀）
+// 生产环境部署时设置 VITE_API_URL 环境变量为后端地址
+const API_BASE_URL = (import.meta as any).env?.VITE_API_URL || "/api";
 
 const api = axios.create({
   baseURL: API_BASE_URL,
