@@ -1,14 +1,13 @@
 from fastapi import APIRouter, Depends
-from aiosqlite import Connection
 from app.db.database import get_db
 
 router = APIRouter()
 
 
 @router.get("/like_count")
-async def like_count(user_id: int, db: Connection = Depends(get_db)):
+async def like_count(user_id: int, db = Depends(get_db)):
     """获取用户点赞数量"""
-    cursor = await db.execute(
+    cursor = db.execute(
         "SELECT COUNT(*) FROM user_feedback WHERE user_id=? AND action='like'",
         (user_id,)
     )
@@ -17,13 +16,13 @@ async def like_count(user_id: int, db: Connection = Depends(get_db)):
 
 
 @router.post("/like")
-async def like_dish(user_id: int, dish_id: int, db: Connection = Depends(get_db)):
+async def like_dish(user_id: int, dish_id: int, db = Depends(get_db)):
     # SQLite 兼容写法：先删后插
-    await db.execute(
+    db.execute(
         "DELETE FROM user_feedback WHERE user_id=? AND dish_id=?",
         (user_id, dish_id)
     )
-    await db.execute(
+    db.execute(
         "INSERT INTO user_feedback (user_id, dish_id, action) VALUES (?,?,?)",
         (user_id, dish_id, "like")
     )
@@ -32,12 +31,12 @@ async def like_dish(user_id: int, dish_id: int, db: Connection = Depends(get_db)
 
 
 @router.post("/skip")
-async def skip_dish(user_id: int, dish_id: int, db: Connection = Depends(get_db)):
-    await db.execute(
+async def skip_dish(user_id: int, dish_id: int, db = Depends(get_db)):
+    db.execute(
         "DELETE FROM user_feedback WHERE user_id=? AND dish_id=?",
         (user_id, dish_id)
     )
-    await db.execute(
+    db.execute(
         "INSERT INTO user_feedback (user_id, dish_id, action) VALUES (?,?,?)",
         (user_id, dish_id, "skip")
     )
