@@ -15,17 +15,11 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="校园食堂推荐助手 API", lifespan=lifespan)
 
-# 从环境变量读取允许的域名（逗号分隔）
-allowed_origins_str = os.getenv("ALLOWED_ORIGINS", "*")
-if allowed_origins_str == "*":
-    allow_origins = ["*"]
-else:
-    allow_origins = [origin.strip() for origin in allowed_origins_str.split(",")]
-
+# CORS 配置 —— 允许所有来源（开发/小程序友好）
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=allow_origins,
-    allow_credentials=True,
+    allow_origins=["*"],          # ← 允许所有域名访问
+    allow_credentials=False,         # ← "*" 来源时必须为 False
     allow_methods=["*"],
     allow_headers=["*"],
 )
