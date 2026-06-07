@@ -7,7 +7,6 @@ export default function Profile() {
   const userId = parseInt(localStorage.getItem("user_id") || "0");
   const [history, setHistory]     = useState<RecommendPlan[]>([]);
   const [nickname, setNickname]   = useState("");
-  const [likeCount, setLikeCount] = useState(0);
   const [likedDishes, setLikedDishes] = useState<Dish[]>([]);
   const [loading, setLoading]     = useState(true);
 
@@ -20,11 +19,6 @@ export default function Profile() {
     recommendAPI.history(userId).then(res => {
       setHistory(res.data || []);
     }).catch(() => {});
-    // 统计点赞数
-    fetch(`/api/feedback/like_count?user_id=${userId}`)
-      .then(r => r.json())
-      .then(d => setLikeCount(d.count || 0))
-      .catch(() => {});
     // 获取收藏的菜品
     feedbackAPI.likedDishes(userId).then(res => {
       setLikedDishes(res.data || []);
@@ -38,12 +32,10 @@ export default function Profile() {
     window.location.href = "/";
   };
 
-
   const handleUnlike = async (dishId: number) => {
     try {
       await feedbackAPI.unlike(userId, dishId);
       setLikedDishes(likedDishes.filter(d => d.id !== dishId));
-      setLikeCount(Math.max(0, likeCount - 1));
     } catch (e) {
       console.error("取消收藏失败", e);
     }
@@ -83,41 +75,39 @@ export default function Profile() {
       </div>
 
       {/* 统计卡片 */}
-      <div className="grid grid-cols-3 gap-3">
-      {/* 统计卡片 — 升级版 */}
-      <div className="grid grid-cols-3 gap-3">
-        <div className="card !p-4 text-center space-y-1 relative overflow-hidden group">
-          <div className="absolute inset-0 bg-gradient-to-br from-blue-50/50 to-transparent opacity-0 group-hover:opacity-100 transition" />
-          <span className="text-2xl block relative">🎲</span>
+      <div className="grid grid-cols-3 gap-2">
+        {/* 推荐次数 */}
+        <div className="bg-white rounded-2xl p-3 text-center border border-orange-100/60 shadow-sm">
+          <div className="text-xl mb-0.5">🎲</div>
           {history.length > 0 ? (
-            <span className="text-2xl font-extrabold text-primary relative">{history.length}</span>
+            <div className="text-xl font-extrabold text-primary leading-tight">{history.length}</div>
           ) : (
-            <span className="text-lg text-gray-300 font-bold relative">—</span>
+            <div className="text-xl font-bold text-gray-300 leading-tight">—</div>
           )}
-          <span className="text-[11px] text-text-secondary relative">推荐次数</span>
+          <div className="text-[10px] text-text-secondary mt-0.5">推荐次数</div>
         </div>
-        <div className="card !p-4 text-center space-y-1 relative overflow-hidden group">
-          <div className="absolute inset-0 bg-gradient-to-br from-red-50/50 to-transparent opacity-0 group-hover:opacity-100 transition" />
-          <span className="text-2xl block relative">❤️</span>
-          {likedDishes.length > 0 ? (
-            <span className="text-2xl font-extrabold text-red-500 animate-in relative">{likedDishes.length}</span>
-          ) : (
-            <span className="text-lg text-gray-300 font-bold relative">—</span>
-          )}
-          <span className="text-[11px] text-text-secondary relative">收藏菜品</span>
-        </div>
-        <div className="card !p-4 text-center space-y-1 relative overflow-hidden group">
-          <div className="absolute inset-0 bg-gradient-to-br from-orange-50/50 to-transparent opacity-0 group-hover:opacity-100 transition" />
-          <span className="text-2xl block relative">📅</span>
-          {_countThisWeek(history) > 0 ? (
-            <span className="text-2xl font-extrabold text-primary relative">{_countThisWeek(history)}</span>
-          ) : (
-            <span className="text-lg text-gray-300 font-bold relative">—</span>
-          )}
-          <span className="text-[11px] text-text-secondary relative">本周推荐</span>
-        </div>
-      </div>
 
+        {/* 收藏菜品 */}
+        <div className="bg-white rounded-2xl p-3 text-center border border-red-100/60 shadow-sm">
+          <div className="text-xl mb-0.5">❤️</div>
+          {likedDishes.length > 0 ? (
+            <div className="text-xl font-extrabold text-red-500 leading-tight">{likedDishes.length}</div>
+          ) : (
+            <div className="text-xl font-bold text-gray-300 leading-tight">—</div>
+          )}
+          <div className="text-[10px] text-text-secondary mt-0.5">收藏菜品</div>
+        </div>
+
+        {/* 本周推荐 */}
+        <div className="bg-white rounded-2xl p-3 text-center border border-orange-100/60 shadow-sm">
+          <div className="text-xl mb-0.5">📅</div>
+          {_countThisWeek(history) > 0 ? (
+            <div className="text-xl font-extrabold text-primary leading-tight">{_countThisWeek(history)}</div>
+          ) : (
+            <div className="text-xl font-bold text-gray-300 leading-tight">—</div>
+          )}
+          <div className="text-[10px] text-text-secondary mt-0.5">本周推荐</div>
+        </div>
       </div>
 
       {/* 我的收藏 */}
@@ -185,10 +175,7 @@ export default function Profile() {
 }
 
 
-
-
-
-// ─── 历史记录项 ─────────────────────────────────────────
+// ─── 历史记录项 ────────────────────────────────────────
 function HistoryItem({ plan }: { plan: any }) {
   const [open, setOpen] = useState(false);
   const date = (plan.created_at || "").slice(0, 10);
