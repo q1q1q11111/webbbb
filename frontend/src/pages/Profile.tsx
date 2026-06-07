@@ -185,16 +185,7 @@ export default function Profile() {
 }
 
 
-// ─── 统计卡片 ───────────────────────────────────────────
-function StatCard({ label, value, emoji }: { label: string; value: number; emoji: string }) {
-  return (
-    <div className="card text-center space-y-1 !p-3">
-      <div className="text-xl">{emoji}</div>
-      <div className="text-lg font-extrabold text-primary">{value}</div>
-      <div className="text-xs text-text-secondary">{label}</div>
-    </div>
-  );
-}
+
 
 
 // ─── 历史记录项 ─────────────────────────────────────────
