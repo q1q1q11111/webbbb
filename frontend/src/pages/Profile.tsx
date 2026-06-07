@@ -5,25 +5,37 @@ import type { RecommendPlan } from "../api/client";
 
 export default function Profile() {
   const userId = parseInt(localStorage.getItem("user_id") || "0");
-  const [history, setHistory]     = useState<RecommendPlan[]>([]);
-  const [nickname, setNickname]   = useState("");
+  const [history, setHistory]       = useState<RecommendPlan[]>([]);
+  const [nickname, setNickname]     = useState("");
   const [likedDishes, setLikedDishes] = useState<Dish[]>([]);
-  const [loading, setLoading]     = useState(true);
+  const [loading, setLoading]       = useState(true);
+
+  // 统一拉取所有数据
+  const fetchAllData = async () => {
+    if (!userId) { setLoading(false); return; }
+    setLoading(true);
+    try {
+      const [profileRes, historyRes, likedRes] = await Promise.all([
+        authAPI.getProfile(userId).catch(() => ({ data: null })),
+        recommendAPI.history(userId).catch(() => ({ data: [] })),
+        feedbackAPI.likedDishes(userId).catch(() => ({ data: [] })),
+      ]);
+      if (profileRes.data) setNickname(profileRes.data.nickname || "");
+      setHistory(historyRes.data || []);
+      setLikedDishes(likedRes.data || []);
+    } catch (e) {
+      console.error("获取数据失败", e);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    if (!userId) { setLoading(false); return; }
-    // 并行请求
-    authAPI.getProfile(userId).then(res => {
-      if (res.data) setNickname(res.data.nickname || "");
-    });
-    recommendAPI.history(userId).then(res => {
-      setHistory(res.data || []);
-    }).catch(() => {});
-    // 获取收藏的菜品
-    feedbackAPI.likedDishes(userId).then(res => {
-      setLikedDishes(res.data || []);
-    }).catch(() => {});
-    setLoading(false);
+    fetchAllData();
+    // 每次页面获得焦点时重新拉取（从首页推荐完回来会触发）
+    const onFocus = () => fetchAllData();
+    window.addEventListener("focus", onFocus);
+    return () => window.removeEventListener("focus", onFocus);
   }, [userId]);
 
   const handleLogout = () => {
@@ -76,38 +88,9 @@ export default function Profile() {
 
       {/* 统计卡片 */}
       <div className="grid grid-cols-3 gap-2">
-        {/* 推荐次数 */}
-        <div className="bg-white rounded-2xl p-3 text-center border border-orange-100/60 shadow-sm">
-          <div className="text-xl mb-0.5">🎲</div>
-          {history.length > 0 ? (
-            <div className="text-xl font-extrabold text-primary leading-tight">{history.length}</div>
-          ) : (
-            <div className="text-xl font-bold text-gray-300 leading-tight">—</div>
-          )}
-          <div className="text-[10px] text-text-secondary mt-0.5">推荐次数</div>
-        </div>
-
-        {/* 收藏菜品 */}
-        <div className="bg-white rounded-2xl p-3 text-center border border-red-100/60 shadow-sm">
-          <div className="text-xl mb-0.5">❤️</div>
-          {likedDishes.length > 0 ? (
-            <div className="text-xl font-extrabold text-red-500 leading-tight">{likedDishes.length}</div>
-          ) : (
-            <div className="text-xl font-bold text-gray-300 leading-tight">—</div>
-          )}
-          <div className="text-[10px] text-text-secondary mt-0.5">收藏菜品</div>
-        </div>
-
-        {/* 本周推荐 */}
-        <div className="bg-white rounded-2xl p-3 text-center border border-orange-100/60 shadow-sm">
-          <div className="text-xl mb-0.5">📅</div>
-          {_countThisWeek(history) > 0 ? (
-            <div className="text-xl font-extrabold text-primary leading-tight">{_countThisWeek(history)}</div>
-          ) : (
-            <div className="text-xl font-bold text-gray-300 leading-tight">—</div>
-          )}
-          <div className="text-[10px] text-text-secondary mt-0.5">本周推荐</div>
-        </div>
+        <StatCard label="推荐次数"  value={history.length}            emoji="🎲" />
+        <StatCard label="收藏菜品"  value={likedDishes.length}       emoji="❤️" />
+        <StatCard label="本周推荐"  value={_countThisWeek(history)}  emoji="📅" />
       </div>
 
       {/* 我的收藏 */}
@@ -115,7 +98,7 @@ export default function Profile() {
         <h3 className="font-bold text-text-primary mb-3">❤️ 我的收藏</h3>
         {likedDishes.length === 0 ? (
           <p className="text-sm text-text-secondary text-center py-8 bg-orange-50/50 rounded-2xl">
-            还没有收藏的菜品，去<a href="/menu" className="text-primary underline">菜单</a>看看吧 🍽️
+            还没有收藏的菜品，去<Link to="/menu" className="text-primary underline">菜单</Link>看看吧 🍽️
           </p>
         ) : (
           <div className="space-y-2">
@@ -175,7 +158,19 @@ export default function Profile() {
 }
 
 
-// ─── 历史记录项 ────────────────────────────────────────
+// ─── 统计卡片 ───────────────────────────────────────────
+function StatCard({ label, value, emoji }: { label: string; value: number | string; emoji: string }) {
+  return (
+    <div className="card text-center space-y-1 !p-3">
+      <div className="text-xl">{emoji}</div>
+      <div className="text-lg font-extrabold text-primary">{value || "—"}</div>
+      <div className="text-xs text-text-secondary">{label}</div>
+    </div>
+  );
+}
+
+
+// ─── 历史记录项 ─────────────────────────────────────────
 function HistoryItem({ plan }: { plan: any }) {
   const [open, setOpen] = useState(false);
   const date = (plan.created_at || "").slice(0, 10);
@@ -220,7 +215,7 @@ function HistoryItem({ plan }: { plan: any }) {
 function _countThisWeek(history: any[]): number {
   const now = new Date();
   const weekStart = new Date(now);
-  weekStart.setDate(now.getDate() - now.getDay()); // 周日
+  weekStart.setDate(now.getDate() - now.getDay()); // 本周日 00:00
   weekStart.setHours(0, 0, 0, 0);
   return history.filter(h => {
     const d = new Date(h.created_at);
