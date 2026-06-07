@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Link } from "react-router-dom";
 import Home from "./pages/Home";
 import Login from "./pages/Login";
+import Menu from "./pages/Menu";
 import Preferences from "./pages/Preferences";
 import RecommendResult from "./pages/RecommendResult";
 import Profile from "./pages/Profile";
@@ -22,7 +23,11 @@ export default function App() {
                         hover:opacity-80 transition">
             🍽️ 食堂推荐
           </Link>
-          <div className="flex gap-5 text-sm">
+          <div className="flex gap-4 text-sm">
+            <Link to="/menu"
+               className="text-text-secondary hover:text-primary transition font-medium">
+              📋 菜单
+            </Link>
             <Link to="/preferences"
                className="text-text-secondary hover:text-primary transition font-medium">
               ⚙️ 偏好
@@ -42,6 +47,7 @@ export default function App() {
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/login" element={<Login />} />
+          <Route path="/menu" element={<Menu />} />
           <Route path="/preferences" element={<Preferences />} />
           <Route path="/recommend" element={<RecommendResult />} />
           <Route path="/profile" element={<Profile />} />
