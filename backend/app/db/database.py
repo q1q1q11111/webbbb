@@ -7,8 +7,6 @@ USE_POSTGRESQL = DATABASE_URL.startswith("postgresql://")
 
 
 class AsyncpgCursor:
-    """统一的 cursor 包装器，同时支持 SELECT 和 INSERT/UPDATE/DELETE"""
-
     def __init__(self, conn, sql: str, params: tuple):
         self._conn = conn
         self._sql = sql
@@ -23,7 +21,12 @@ class AsyncpgCursor:
             if self._is_query():
                 self._rows = await self._conn.fetch(self._sql, *self._params)
             else:
-                await self._conn.execute(self._sql, *self._params)
+                # ⭐ 关键修复：PostgreSQL 布尔类型需要 True/False，不是 0/1
+                converted = tuple(
+                    False if p == 0 else (True if p == 1 else p)
+                    for p in self._params
+                )
+                await self._conn.execute(self._sql, *converted)
             self._executed = True
 
     async def _ensure_executed(self):
