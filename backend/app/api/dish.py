@@ -47,7 +47,7 @@ async def list_dishes(
     max_price: float = 0,
     db = Depends(get_db)
 ):
-    sql = "SELECT d.*, c.name AS canteen_name FROM dishes d JOIN canteens c ON d.canteen_id=c.id WHERE d.is_available=1"
+    sql = "SELECT d.*, c.name AS canteen_name FROM dishes d JOIN canteens c ON d.canteen_id=c.id WHERE d.is_available"
     args: list = []
     if canteen_id:
         sql += " AND d.canteen_id=?"
@@ -104,6 +104,6 @@ async def update_dish(dish_id: int, req: DishUpdate, db = Depends(get_db)):
 
 @router.delete("/delete")
 async def delete_dish(dish_id: int, db = Depends(get_db)):
-    db.execute("UPDATE dishes SET is_available=0 WHERE id=?", (dish_id,))
+    db.execute("UPDATE dishes SET is_available=? WHERE id=?", (0, dish_id))
     await db.commit()
     return {"msg": "菜品已隐藏"}
