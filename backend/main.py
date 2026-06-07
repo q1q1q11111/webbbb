@@ -15,11 +15,11 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="校园食堂推荐助手 API", lifespan=lifespan)
 
-# CORS 配置 —— 允许所有来源（开发/小程序友好）
+# CORS 配置 —— 允许所有来源
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],          # ← 允许所有域名访问
-    allow_credentials=False,         # ← "*" 来源时必须为 False
+    allow_origins=["*"],
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
