@@ -1,5 +1,4 @@
 from fastapi import APIRouter, Depends
-from aiosqlite import Connection
 from app.db.database import get_db
 from app.algorithms.recommender import recommend_for_user
 
@@ -9,10 +8,10 @@ router = APIRouter()
 async def get_recommendation(
     user_id: int,
     budget: float = 0,
-    db: Connection = Depends(get_db)
+    db = Depends(get_db)
 ):
     if budget <= 0:
-        cursor = await db.execute("SELECT budget FROM user_preferences WHERE user_id=?", (user_id,))
+        cursor = db.execute("SELECT budget FROM user_preferences WHERE user_id=?", (user_id,))
         row = await cursor.fetchone()
         budget = row[0] if row and row[0] else 0
 
@@ -21,8 +20,8 @@ async def get_recommendation(
 
 
 @router.get("/history")
-async def get_history(user_id: int, db: Connection = Depends(get_db)):
-    cursor = await db.execute(
+async def get_history(user_id: int, db = Depends(get_db)):
+    cursor = db.execute(
         "SELECT * FROM recommendation_history WHERE user_id=? ORDER BY created_at DESC LIMIT 20",
         (user_id,)
     )
