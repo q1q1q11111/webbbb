@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Link } from "react-router-dom";
 import Home from "./pages/Home";
 import Login from "./pages/Login";
 import Preferences from "./pages/Preferences";
@@ -17,24 +17,24 @@ export default function App() {
                         px-4 py-3
                         flex items-center justify-between
                         shadow-sm">
-          <a href="/"
+          <Link to="/"
              className="text-primary font-extrabold text-lg tracking-tight
                         hover:opacity-80 transition">
             🍽️ 食堂推荐
-          </a>
+          </Link>
           <div className="flex gap-5 text-sm">
-            <a href="/preferences"
+            <Link to="/preferences"
                className="text-text-secondary hover:text-primary transition font-medium">
               ⚙️ 偏好
-            </a>
-            <a href="/profile"
-               className="text-text text-secondary hover:text-primary transition font-medium">
+            </Link>
+            <Link to="/profile"
+               className="text-text-secondary hover:text-primary transition font-medium">
               👤 我的
-            </a>
-            <a href="/admin"
+            </Link>
+            <Link to="/admin"
                className="text-text-secondary hover:text-orange-600 transition font-medium">
               🛠️ 管理
-            </a>
+            </Link>
           </div>
         </nav>
 
