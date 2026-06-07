@@ -93,10 +93,12 @@ async def _get_feedback(db, user_id: int) -> list:
 async def _get_all_feedback(db) -> dict:
     """返回 {user_id: {dish_id: action}} """
     cur = db.execute("SELECT user_id, dish_id, action FROM user_feedback")
+    rows = await cur.fetchall()
     d = defaultdict(dict)
-    async for row in cur:
+    for row in rows:
         d[row["user_id"]][row["dish_id"]] = row["action"]
     return dict(d)
+
 
 
 async def _fetch_dishes(db, pref, budget: float, skipped_ids: set) -> list:
