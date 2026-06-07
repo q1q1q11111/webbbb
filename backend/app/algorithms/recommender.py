@@ -9,7 +9,7 @@ from collections import defaultdict
 from typing import List, Tuple, Dict, Optional
 
 
-# ── 营养目标（每餐）─────────────────────────────────────────────
+# ── 营养目标（每餐）─────────────────────────────────────
 TARGET = {
     "calories_min": 400,
     "calories_max": 900,
@@ -26,7 +26,7 @@ NOURISH_TAGS = {"高蛋白", "低脂", "高纤维", "补充维生素", "补铁",
 ALL_LEARNABLE_TAGS = list(TASTE_TAGS | NOURISH_TAGS)
 
 
-# ── 公开接口 ────────────────────────────────────────────────────
+# ── 公开接口 ─────────────────────────────────────────────────
 async def recommend_for_user(db, user_id: int, budget: float = 0, top_n: int = 6) -> list:
     """
     为指定用户生成推荐方案。
@@ -76,15 +76,15 @@ async def recommend_for_user(db, user_id: int, budget: float = 0, top_n: int = 6
     return results
 
 
-# ── 数据获取 ───────────────────────────────────────────────────
+# ── 数据获取 ─────────────────────────────────────────────────
 async def _get_pref(db, user_id: int) -> Optional[dict]:
-    cur = await db.execute("SELECT * FROM user_preferences WHERE user_id=?", (user_id,))
+    cur = db.execute("SELECT * FROM user_preferences WHERE user_id=?", (user_id,))
     row = await cur.fetchone()
     return dict(row) if row else None
 
 
 async def _get_feedback(db, user_id: int) -> list:
-    cur = await db.execute(
+    cur = db.execute(
         "SELECT dish_id, action FROM user_feedback WHERE user_id=?", (user_id,)
     )
     return [dict(r) for r in await cur.fetchall()]
@@ -92,7 +92,7 @@ async def _get_feedback(db, user_id: int) -> list:
 
 async def _get_all_feedback(db) -> dict:
     """返回 {user_id: {dish_id: action}} """
-    cur = await db.execute("SELECT user_id, dish_id, action FROM user_feedback")
+    cur = db.execute("SELECT user_id, dish_id, action FROM user_feedback")
     d = defaultdict(dict)
     async for row in cur:
         d[row["user_id"]][row["dish_id"]] = row["action"]
@@ -100,7 +100,7 @@ async def _get_all_feedback(db) -> dict:
 
 
 async def _fetch_dishes(db, pref, budget: float, skipped_ids: set) -> list:
-    sql = "SELECT * FROM dishes WHERE is_available=1"
+    sql = "SELECT * FROM dishes WHERE is_available"
     args = []
     if pref and pref.get("allergies"):
         for a in [x.strip() for x in (pref["allergies"] or "").split(",") if x.strip()]:
@@ -112,13 +112,13 @@ async def _fetch_dishes(db, pref, budget: float, skipped_ids: set) -> list:
     if pref and pref.get("dietary_type") == "素食":
         sql += " AND category IN ('素菜','主食','汤')"
     sql += " ORDER BY price"
-    cur = await db.execute(sql, tuple(args))
+    cur = db.execute(sql, tuple(args))
     rows = await cur.fetchall()
     dishes = [dict(r) for r in rows]
     return [d for d in dishes if d["id"] not in skipped_ids]
 
 
-# ── 智能组合生成 ───────────────────────────────────────────────
+# ── 智能组合生成 ─────────────────────────────────────────────
 def _generate_smart_plans(
     dishes: list, budget: float, pref, liked_ids: list,
     all_feedback: dict, user_id: int
@@ -266,7 +266,7 @@ def _fill_random(dishes: list, budget: float, liked_ids: list, cf_boost_ids: set
     return plans
 
 
-# ── 营养判断 ───────────────────────────────────────────────────
+# ── 营养判断 ─────────────────────────────────────────────────
 def _plan_price(plan):
     return sum(d["price"] for d in plan if d)
 
@@ -284,7 +284,7 @@ def _nutrition_ok(plan) -> bool:
     return True
 
 
-# ── 打分函数 v2 ────────────────────────────────────────────────
+# ── 打分函数 v2 ──────────────────────────────────────────────
 def _score_plan_v2(plan, liked_ids, pref, user_id, all_feedback, db) -> float:
     """
     综合打分（0-10）：
@@ -417,7 +417,7 @@ def _cosine_sim(a: dict, b: dict) -> float:
     return dot / (na * nb)
 
 
-# ── 推荐理由 ───────────────────────────────────────────────────
+# ── 推荐理由 ─────────────────────────────────────────────────
 def _explain_recommendation(plan, pref, liked_ids: list) -> list:
     """生成推荐理由（前端展示用）"""
     reasons = []
