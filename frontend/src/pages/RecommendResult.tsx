@@ -19,7 +19,6 @@ export default function RecommendResult() {
       const data = JSON.parse(stored);
       setPlans(data);
       setLoading(false);
-      // 尝试从 pref 取预算
       fetchBudget();
     } else if (userId) {
       recommendAPI.get(userId).then(res => {
@@ -51,10 +50,25 @@ export default function RecommendResult() {
     await feedbackAPI.skip(userId, dishId);
   };
 
-  /** 选择这个方案 */
-  const handleChoose = (plan: RecommendPlan) => {
-    alert(`🎉 已选择方案！总价 ¥${plan.total_price.toFixed(1)}`);
-    // 可扩展：记录到后端 history
+  /** 选择这个方案并保存历史 */
+  const handleChoose = async (plan: RecommendPlan) => {
+    if (!userId) return alert("请先登录");
+    try {
+      await recommendAPI.saveHistory({
+        user_id: userId,
+        dish_ids: plan.dish_ids.join(","),
+        total_price: plan.total_price,
+        total_calories: plan.total_calories,
+        total_protein: plan.total_protein,
+        total_fat: plan.total_fat || 0,
+        total_carbs: plan.total_carbs || 0,
+        score: plan.score,
+      });
+      alert(`🎉 已选择方案！总价 ¥${plan.total_price.toFixed(1)}`);
+    } catch (e) {
+      console.error("保存历史失败", e);
+      alert("保存失败，但推荐结果仍可使用");
+    }
   };
 
   if (loading) {
@@ -135,12 +149,10 @@ function PlanCard({
   const prot  = plan.total_protein;
   const price = plan.total_price;
 
-  // 营养进度条百分比（上限 100%）
   const calPct  = Math.min(100, cal  / TARGET.cal_max  * 100);
   const protPct = Math.min(100, prot / TARGET.prot_max * 100);
   const budPct  = budget > 0 ? Math.min(100, price / budget * 100) : 60;
 
-  // 颜色：<60% 绿，60-90% 黄，>90% 红
   const barColor = (pct: number) =>
     pct < 60 ? "bg-accent" : pct < 90 ? "bg-secondary" : "bg-red-400";
 
