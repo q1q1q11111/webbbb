@@ -19,6 +19,28 @@ async def get_recommendation(
     return {"plans": results}
 
 
+@router.post("/save_history")
+async def save_history(
+    user_id: int,
+    dish_ids: str,
+    total_price: float,
+    total_calories: int,
+    total_protein: float,
+    total_fat: float = 0,
+    total_carbs: float = 0,
+    score: float = 0,
+    db = Depends(get_db)
+):
+    await db.execute(
+        """INSERT INTO recommendation_history
+           (user_id, dish_ids, total_price, total_calories, total_protein, total_fat, total_carbs, score)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+        (user_id, dish_ids, total_price, total_calories, total_protein, total_fat, total_carbs, score)
+    )
+    await db.commit()
+    return {"success": True}
+
+
 @router.get("/history")
 async def get_history(user_id: int, db = Depends(get_db)):
     cursor = db.execute(
