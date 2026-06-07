@@ -7,91 +7,77 @@ USE_POSTGRESQL = DATABASE_URL.startswith("postgresql://")
 
 
 class AsyncpgCursor:
-    """模拟 aiosqlite cursor，用于 PostgreSQL"""
-    
     def __init__(self, conn: asyncpg.Connection, sql: str, params: tuple):
         self._conn = conn
         self._sql = sql
         self._params = params
-        self._rows: List[asyncpg.Record] = []
+        self._rows: List[Any] = []
         self._pos = 0
         self._executed = False
-    
+
     async def _ensure_executed(self):
         if not self._executed:
             if self._sql.strip().upper().startswith("SELECT") or \
-               self._sql.strip().upper().startswith("WITH") or \
                "RETURNING" in self._sql.upper():
                 self._rows = await self._conn.fetch(self._sql, *self._params)
             else:
                 await self._conn.execute(self._sql, *self._params)
             self._executed = True
-    
-    async def fetchone(self) -> Optional[asyncpg.Record]:
+
+    async def fetchone(self) -> Optional[Any]:
         await self._ensure_executed()
         if self._pos < len(self._rows):
             row = self._rows[self._pos]
             self._pos += 1
             return row
         return None
-    
-    async def fetchall(self) -> List[asyncpg.Record]:
+
+    async def fetchall(self) -> List[Any]:
         await self._ensure_executed()
         return self._rows
 
 
 class DBConnection:
-    """统一的数据库连接包装层 - 使用类而非 @asynccontextmanager 解决 Python 3.11 兼容性"""
-    
     def __init__(self):
         self._conn = None
         self._is_postgres = USE_POSTGRESQL
+        self._sqlite_conn = None
         self.row_factory = None
         self.lastrowid = None
-    
+
     async def __aenter__(self):
         if self._is_postgres:
-            pg_conn = await asyncpg.connect(DATABASE_URL)
-            self._conn = pg_conn
+            self._conn = await asyncpg.connect(DATABASE_URL)
             return self
         else:
             import aiosqlite
             db_path = DATABASE_URL.replace("sqlite:///", "")
-            conn = await aiosqlite.connect(db_path)
-            conn.row_factory = aiosqlite.Row
-            self._conn = conn
+            self._sqlite_conn = await aiosqlite.connect(db_path)
+            self._sqlite_conn.row_factory = aiosqlite.Row
+            self._conn = self._sqlite_conn
             return self
-    
+
     async def __aexit__(self, exc_type, exc_val, exc_tb):
-        if self._conn:
-            if self._is_postgres:
+        if self._is_postgres:
+            if self._conn:
                 await self._conn.close()
-            else:
-                await self._conn.close()
-    
+        else:
+            if self._sqlite_conn:
+                await self._sqlite_conn.close()
+
     def execute(self, sql: str, params: tuple = ()) -> AsyncpgCursor:
         if self._is_postgres:
             converted_sql = self._convert_placeholders(sql)
             return AsyncpgCursor(self._conn, converted_sql, params)
         else:
-            # SQLite 模式下直接调用原生方法
-            import asyncio
-            # 返回一个包装对象让调用方用 await
-            return SQLiteCursorWrapper(self._conn, sql, params)
-    
+            # SQLite 模式
+            cursor = self._sqlite_conn.execute(sql, params)
+            return SQLiteCursorWrapper(cursor)
+
     async def commit(self):
-        if self._is_postgres:
-            pass  # PostgreSQL 默认自动提交事务
-        else:
-            await self._conn.commit()
-    
-    async def close(self):
-        if self._conn:
-            if self._is_postgres:
-                await self._conn.close()
-            else:
-                await self._conn.close()
-    
+        if not self._is_postgres:
+            await self._sqlite_conn.commit()
+
     def _convert_placeholders(self, sql: str) -> str:
         result = []
         in_single = False
@@ -116,35 +102,17 @@ class DBConnection:
 
 
 class SQLiteCursorWrapper:
-    """SQLite 模式下的 cursor 包装器"""
-    
-    def __init__(self, conn, sql: str, params: tuple):
-        self._conn = conn
-        self._sql = sql
-        self._params = params
-        self._cursor = None
-        self._lastrowid = None
-    
-    async def _ensure_cursor(self):
-        if not self._cursor:
-            self._cursor = await self._conn.execute(self._sql, self._params)
-            self._lastrowid = self._cursor.lastrowid
-    
-    @property
-    def lastrowid(self):
-        return self._lastrowid
-    
+    def __init__(self, cursor):
+        self._cursor = cursor
+
     async def fetchone(self):
-        await self._ensure_cursor()
         return await self._cursor.fetchone()
-    
+
     async def fetchall(self):
-        await self._ensure_cursor()
         return await self._cursor.fetchall()
 
 
 def get_db():
-    """返回数据库连接上下文管理器实例（用于 FastAPI Depends）"""
     return DBConnection()
 
 
