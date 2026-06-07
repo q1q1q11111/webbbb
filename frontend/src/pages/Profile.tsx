@@ -84,9 +84,40 @@ export default function Profile() {
 
       {/* 统计卡片 */}
       <div className="grid grid-cols-3 gap-3">
-        <StatCard label="推荐次数"  value={history.length}  emoji="🎲" />
-        <StatCard label="收藏菜品"  value={likedDishes.length} emoji="❤️" />
-        <StatCard label="本周推荐"  value={_countThisWeek(history)} emoji="📅" />
+      {/* 统计卡片 — 升级版 */}
+      <div className="grid grid-cols-3 gap-3">
+        <div className="card !p-4 text-center space-y-1 relative overflow-hidden group">
+          <div className="absolute inset-0 bg-gradient-to-br from-blue-50/50 to-transparent opacity-0 group-hover:opacity-100 transition" />
+          <span className="text-2xl block relative">🎲</span>
+          {history.length > 0 ? (
+            <span className="text-2xl font-extrabold text-primary relative">{history.length}</span>
+          ) : (
+            <span className="text-lg text-gray-300 font-bold relative">—</span>
+          )}
+          <span className="text-[11px] text-text-secondary relative">推荐次数</span>
+        </div>
+        <div className="card !p-4 text-center space-y-1 relative overflow-hidden group">
+          <div className="absolute inset-0 bg-gradient-to-br from-red-50/50 to-transparent opacity-0 group-hover:opacity-100 transition" />
+          <span className="text-2xl block relative">❤️</span>
+          {likedDishes.length > 0 ? (
+            <span className="text-2xl font-extrabold text-red-500 animate-in relative">{likedDishes.length}</span>
+          ) : (
+            <span className="text-lg text-gray-300 font-bold relative">—</span>
+          )}
+          <span className="text-[11px] text-text-secondary relative">收藏菜品</span>
+        </div>
+        <div className="card !p-4 text-center space-y-1 relative overflow-hidden group">
+          <div className="absolute inset-0 bg-gradient-to-br from-orange-50/50 to-transparent opacity-0 group-hover:opacity-100 transition" />
+          <span className="text-2xl block relative">📅</span>
+          {_countThisWeek(history) > 0 ? (
+            <span className="text-2xl font-extrabold text-primary relative">{_countThisWeek(history)}</span>
+          ) : (
+            <span className="text-lg text-gray-300 font-bold relative">—</span>
+          )}
+          <span className="text-[11px] text-text-secondary relative">本周推荐</span>
+        </div>
+      </div>
+
       </div>
 
       {/* 我的收藏 */}
