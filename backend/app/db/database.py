@@ -7,17 +7,18 @@ USE_POSTGRESQL = DATABASE_URL.startswith("postgresql://")
 
 
 class AsyncpgCursor:
-    def __init__(self, conn: asyncpg.Connection, sql: str, params: tuple):
+    def __init__(self, conn, sql: str, params: tuple, auto_execute: bool = False):
         self._conn = conn
         self._sql = sql
         self._params = params
         self._rows: List[Any] = []
         self._pos = 0
-        self._executed = False
+        self._executed = auto_execute  # ← 关键：非SELECT已提前执行
 
     async def _ensure_executed(self):
         if not self._executed:
             if self._sql.strip().upper().startswith("SELECT") or \
+               self._sql.strip().upper().startswith("WITH") or \
                "RETURNING" in self._sql.upper():
                 self._rows = await self._conn.fetch(self._sql, *self._params)
             else:
@@ -68,10 +69,25 @@ class DBConnection:
     def execute(self, sql: str, params: tuple = ()) -> AsyncpgCursor:
         if self._is_postgres:
             converted_sql = self._convert_placeholders(sql)
-            return AsyncpgCursor(self._conn, converted_sql, params)
+            # 判断是否为查询语句
+            upper_sql = converted_sql.strip().upper()
+            is_query = upper_sql.startswith("SELECT") or \
+                       upper_sql.startswith("WITH") or \
+                       "RETURNING" in upper_sql
+            if is_query:
+                return AsyncpgCursor(self._conn, converted_sql, params, auto_execute=False)
+            else:
+                # INSERT/UPDATE/DELETE: 立即执行
+                cursor = AsyncpgCursor(self._conn, converted_sql, params, auto_execute=True)
+                import asyncio
+                # 同步执行 INSERT/UPDATE/DELETE
+                loop = asyncio.get_event_loop()
+                loop.create_task(cursor._ensure_executed())
+                return cursor
         else:
             # SQLite 模式
-            cursor = self._sqlite_conn.execute(sql, params)
+            import asyncio
+            cursor = asyncio.run(self._sqlite_conn.execute(sql, params))
             return SQLiteCursorWrapper(cursor)
 
     async def commit(self):
@@ -111,13 +127,15 @@ class SQLiteCursorWrapper:
     async def fetchall(self):
         return await self._cursor.fetchall()
 
+
+# ⭐ FastAPI 依赖注入
 async def get_db():
-    """FastAPI 依赖注入：数据库连接（自动管理生命周期）"""
     db = DBConnection()
     async with db:
         yield db
 
 
+# ========== 初始化 ==========
 
 async def init_db():
     if USE_POSTGRESQL:
@@ -166,3 +184,4 @@ async def _init_postgresql():
                         await conn.execute(stmt)
     finally:
         await conn.close()
+
