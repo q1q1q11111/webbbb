@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { authAPI, recommendAPI } from "../api/client";
 import type { RecommendPlan } from "../api/client";
 
@@ -37,7 +38,7 @@ export default function Profile() {
       <div className="min-h-[60vh] flex flex-col items-center justify-center gap-4">
         <div className="text-6xl">🔒</div>
         <p className="text-text-secondary">请先登录</p>
-        <a href="/login" className="btn-primary">去登录</a>
+        <Link to="/login" className="btn-primary">去登录</Link>
       </div>
     );
   }
