@@ -85,7 +85,7 @@ export default function Profile() {
       {/* 统计卡片 */}
       <div className="grid grid-cols-3 gap-3">
         <StatCard label="推荐次数"  value={history.length}  emoji="🎲" />
-        <StatCard label="收藏菜品"  value={likeCount}        emoji="❤️" />
+        <StatCard label="收藏菜品"  value={likedDishes.length} emoji="❤️" />
         <StatCard label="本周推荐"  value={_countThisWeek(history)} emoji="📅" />
       </div>
 
