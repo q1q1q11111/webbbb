@@ -32,9 +32,9 @@ class DishUpdate(BaseModel):
 
 
 @router.get("/canteens")
-async def list_canteens(db:= Depends(get_db)):
+async def list_canteens(db = Depends(get_db)):
     """获取所有食堂列表"""
-    cursor = await db.execute("SELECT * FROM canteens ORDER BY id")
+    cursor = db.execute("SELECT * FROM canteens ORDER BY id")
     rows = await cursor.fetchall()
     return [dict(r) for r in rows]
 
@@ -45,7 +45,7 @@ async def list_dishes(
     category: str = "",
     keyword: str = "",
     max_price: float = 0,
-    db:= Depends(get_db)
+    db = Depends(get_db)
 ):
     sql = "SELECT d.*, c.name AS canteen_name FROM dishes d JOIN canteens c ON d.canteen_id=c.id WHERE d.is_available=1"
     args: list = []
@@ -62,14 +62,14 @@ async def list_dishes(
         sql += " AND d.price <= ?"
         args.append(max_price)
     sql += " ORDER BY d.price"
-    cursor = await db.execute(sql, tuple(args))
+    cursor = db.execute(sql, tuple(args))
     rows = await cursor.fetchall()
     return [dict(r) for r in rows]
 
 
 @router.post("/add")
-async def add_dish(req: DishIn, db: = Depends(get_db)):
-    cursor = await db.execute(
+async def add_dish(req: DishIn, db = Depends(get_db)):
+    cursor = db.execute(
         "INSERT INTO dishes (name, canteen_id, price, calories, protein, fat, carbs, category, tags, description) VALUES (?,?,?,?,?,?,?,?,?,?)",
         (req.name, req.canteen_id, req.price, req.calories, req.protein, req.fat, req.carbs, req.category, req.tags, req.description)
     )
@@ -78,7 +78,7 @@ async def add_dish(req: DishIn, db: = Depends(get_db)):
 
 
 @router.put("/update")
-async def update_dish(dish_id: int, req: DishUpdate, db: = Depends(get_db)):
+async def update_dish(dish_id: int, req: DishUpdate, db = Depends(get_db)):
     fields = []
     args = []
     for col, val in [
@@ -97,13 +97,13 @@ async def update_dish(dish_id: int, req: DishUpdate, db: = Depends(get_db)):
     if not fields:
         return {"error": "没有可更新的字段"}
     args.append(dish_id)
-    await db.execute(f"UPDATE dishes SET {','.join(fields)} WHERE id=?", tuple(args))
+    db.execute(f"UPDATE dishes SET {','.join(fields)} WHERE id=?", tuple(args))
     await db.commit()
     return {"msg": "菜品更新成功"}
 
 
 @router.delete("/delete")
-async def delete_dish(dish_id: int, db: = Depends(get_db)):
-    await db.execute("UPDATE dishes SET is_available=0 WHERE id=?", (dish_id,))
+async def delete_dish(dish_id: int, db = Depends(get_db)):
+    db.execute("UPDATE dishes SET is_available=0 WHERE id=?", (dish_id,))
     await db.commit()
     return {"msg": "菜品已隐藏"}
