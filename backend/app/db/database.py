@@ -111,9 +111,12 @@ class SQLiteCursorWrapper:
     async def fetchall(self):
         return await self._cursor.fetchall()
 
+async def get_db():
+    """FastAPI 依赖注入：数据库连接（自动管理生命周期）"""
+    db = DBConnection()
+    async with db:
+        yield db
 
-def get_db():
-    return DBConnection()
 
 
 async def init_db():
