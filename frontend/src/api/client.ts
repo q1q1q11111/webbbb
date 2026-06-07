@@ -1,5 +1,7 @@
 import axios from "axios";
 
+// 从环境变量获取 API 地址（Vite 用 import.meta.env.VITE_ 前缀）
+// 生产环境部署时设置 VITE_API_URL 环境变量为后端地址
 const API_BASE_URL = (import.meta as any).env?.VITE_API_URL || "/api";
 
 const api = axios.create({
@@ -57,6 +59,8 @@ export const dishAPI = {
     api.get("/dish/list", { params }),
   canteens: () =>
     api.get("/dish/canteens"),
+  menu: (userId?: number) =>
+    api.get(`/dish/menu?user_id=${userId || 0}`),
   add: (dish: Omit<Dish, "id" | "canteen_name"> & { canteen_id: number }) =>
     api.post("/dish/add", dish),
   update: (dishId: number, dish: Partial<Omit<Dish, "id" | "canteen_name"> & { canteen_id?: number }>) =>
@@ -70,15 +74,30 @@ export const recommendAPI = {
     api.get(`/recommend/for_user?user_id=${userId}&budget=${budget || 0}`),
   history: (userId: number) =>
     api.get(`/recommend/history?user_id=${userId}`),
+  saveHistory: (data: {
+    user_id: number;
+    dish_ids: string;
+    total_price: number;
+    total_calories: number;
+    total_protein: number;
+    total_fat?: number;
+    total_carbs?: number;
+    score?: number;
+  }) =>
+    api.post("/recommend/save_history", data),
 };
 
 export const feedbackAPI = {
   like: (userId: number, dishId: number) =>
     api.post(`/feedback/like?user_id=${userId}&dish_id=${dishId}`),
+  unlike: (userId: number, dishId: number) =>
+    api.delete(`/feedback/unlike?user_id=${userId}&dish_id=${dishId}`),
   skip: (userId: number, dishId: number) =>
     api.post(`/feedback/skip?user_id=${userId}&dish_id=${dishId}`),
-  likeCount: (userId: number) =>
-    api.get(`/feedback/like_count?user_id=${userId}`),
+  likedDishes: (userId: number) =>
+    api.get(`/feedback/liked_dishes?user_id=${userId}`),
+  dishLikeCount: (dishId: number) =>
+    api.get(`/feedback/dish_like_count?dish_id=${dishId}`),
 };
 
 export default api;
