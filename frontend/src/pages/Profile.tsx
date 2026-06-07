@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { authAPI, recommendAPI } from "../api/client";
+import { authAPI, recommendAPI, feedbackAPI, Dish } from "../api/client";
 import type { RecommendPlan } from "../api/client";
 
 export default function Profile() {
@@ -8,6 +8,7 @@ export default function Profile() {
   const [history, setHistory]     = useState<RecommendPlan[]>([]);
   const [nickname, setNickname]   = useState("");
   const [likeCount, setLikeCount] = useState(0);
+  const [likedDishes, setLikedDishes] = useState<Dish[]>([]);
   const [loading, setLoading]     = useState(true);
 
   useEffect(() => {
@@ -24,6 +25,10 @@ export default function Profile() {
       .then(r => r.json())
       .then(d => setLikeCount(d.count || 0))
       .catch(() => {});
+    // 获取收藏的菜品
+    feedbackAPI.likedDishes(userId).then(res => {
+      setLikedDishes(res.data || []);
+    }).catch(() => {});
     setLoading(false);
   }, [userId]);
 
@@ -31,6 +36,16 @@ export default function Profile() {
     localStorage.removeItem("user_id");
     localStorage.removeItem("username");
     window.location.reload();
+  };
+
+  const handleUnlike = async (dishId: number) => {
+    try {
+      await feedbackAPI.unlike(userId, dishId);
+      setLikedDishes(likedDishes.filter(d => d.id !== dishId));
+      setLikeCount(Math.max(0, likeCount - 1));
+    } catch (e) {
+      console.error("取消收藏失败", e);
+    }
   };
 
   if (!userId) {
@@ -46,6 +61,10 @@ export default function Profile() {
   if (loading) {
     return <p className="text-center p-8 text-text-secondary">加载中...</p>;
   }
+
+  const categoryEmoji: Record<string, string> = {
+    "荤菜": "🥩", "素菜": "🥬", "汤": "🍲", "主食": "🍚", "小吃": "🍢",
+  };
 
   return (
     <div className="max-w-md mx-auto px-4 py-6 space-y-6">
@@ -65,8 +84,45 @@ export default function Profile() {
       {/* 统计卡片 */}
       <div className="grid grid-cols-3 gap-3">
         <StatCard label="推荐次数"  value={history.length}  emoji="🎲" />
-        <StatCard label="点赞菜品"  value={likeCount}        emoji="❤️" />
+        <StatCard label="收藏菜品"  value={likeCount}        emoji="❤️" />
         <StatCard label="本周推荐"  value={_countThisWeek(history)} emoji="📅" />
+      </div>
+
+      {/* 我的收藏 */}
+      <div>
+        <h3 className="font-bold text-text-primary mb-3">❤️ 我的收藏</h3>
+        {likedDishes.length === 0 ? (
+          <p className="text-sm text-text-secondary text-center py-8 bg-orange-50/50 rounded-2xl">
+            还没有收藏的菜品，去<a href="/menu" className="text-primary underline">菜单</a>看看吧 🍽️
+          </p>
+        ) : (
+          <div className="space-y-2">
+            {likedDishes.slice(0, 20).map(dish => (
+              <div key={dish.id} className="card !p-3 flex items-center gap-3 hover:shadow-sm transition">
+                <span className="text-xl">
+                  {categoryEmoji[dish.category] || "🍽️"}
+                </span>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium text-text-primary truncate">{dish.name}</span>
+                    {dish.canteen_name && (
+                      <span className="text-[10px] text-text-secondary bg-gray-100 px-1.5 py-0.5 rounded shrink-0">
+                        {dish.canteen_name}
+                      </span>
+                    )}
+                  </div>
+                  <span className="text-xs text-text-secondary">¥{dish.price.toFixed(1)}</span>
+                </div>
+                <button
+                  onClick={() => handleUnlike(dish.id)}
+                  className="text-xs text-red-400 hover:text-red-500 transition shrink-0"
+                >
+                  取消
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* 推荐历史 */}
