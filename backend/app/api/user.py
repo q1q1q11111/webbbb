@@ -1,5 +1,4 @@
 from fastapi import APIRouter, Depends
-from aiosqlite import Connection
 from pydantic import BaseModel
 from app.db.database import get_db
 
@@ -27,20 +26,21 @@ class PreferencesIn(BaseModel):
 
 
 @router.post("/register")
-async def register(req: RegisterIn, db: Connection = Depends(get_db)):
+async def register(req: RegisterIn, db = Depends(get_db)):
     pw_hash = req.password  # 简化，实际应加密
-    cursor = await db.execute(
+    cursor = db.execute(
         "INSERT INTO users (username, password_hash, nickname) VALUES (?,?,?)",
         (req.username, pw_hash, req.nickname or req.username)
     )
     await db.commit()
-    row = await (await db.execute("SELECT id FROM users WHERE username=?", (req.username,))).fetchone()
+    cursor2 = db.execute("SELECT id FROM users WHERE username=?", (req.username,))
+    row = await cursor2.fetchone()
     return {"user_id": row[0], "msg": "注册成功"}
 
 
 @router.post("/login")
-async def login(req: LoginIn, db: Connection = Depends(get_db)):
-    cursor = await db.execute(
+async def login(req: LoginIn, db = Depends(get_db)):
+    cursor = db.execute(
         "SELECT id, nickname FROM users WHERE username=? AND password_hash=?",
         (req.username, req.password)
     )
@@ -51,24 +51,24 @@ async def login(req: LoginIn, db: Connection = Depends(get_db)):
 
 
 @router.get("/profile")
-async def get_profile(user_id: int, db: Connection = Depends(get_db)):
-    cursor = await db.execute("SELECT * FROM user_preferences WHERE user_id=?", (user_id,))
+async def get_profile(user_id: int, db = Depends(get_db)):
+    cursor = db.execute("SELECT * FROM user_preferences WHERE user_id=?", (user_id,))
     row = await cursor.fetchone()
     return dict(row) if row else {}
 
 
 @router.get("/preferences")
-async def get_preferences(user_id: int, db: Connection = Depends(get_db)):
+async def get_preferences(user_id: int, db = Depends(get_db)):
     """获取用户偏好设置"""
-    cursor = await db.execute("SELECT * FROM user_preferences WHERE user_id=?", (user_id,))
+    cursor = db.execute("SELECT * FROM user_preferences WHERE user_id=?", (user_id,))
     row = await cursor.fetchone()
     return dict(row) if row else {}
 
 
 @router.post("/preferences")
-async def save_preferences(req: PreferencesIn, user_id: int = None, db: Connection = Depends(get_db)):
-    await db.execute("DELETE FROM user_preferences WHERE user_id=?", (user_id,))
-    await db.execute(
+async def save_preferences(req: PreferencesIn, user_id: int = None, db = Depends(get_db)):
+    db.execute("DELETE FROM user_preferences WHERE user_id=?", (user_id,))
+    db.execute(
         "INSERT INTO user_preferences (user_id, dietary_type, allergies, spicy_level, sweet_preference, sour_preference, budget) VALUES (?,?,?,?,?,?,?)",
         (user_id, req.dietary_type, req.allergies, req.spicy_level, req.sweet_preference, req.sour_preference, req.budget)
     )
