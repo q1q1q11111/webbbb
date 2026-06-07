@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { recommendAPI, authAPI } from "../api/client";
+import { recommendAPI } from "../api/client";
 
 export default function Home() {
   const [userId, setUserId] = useState<number>(() => {
