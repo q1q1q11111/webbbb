@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { dishAPI, feedbackAPI, Dish } from "../api/client";
 
 interface MenuDish extends Dish {
@@ -21,6 +21,7 @@ export default function Menu() {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState(0);
   const [toast, setToast] = useState("");
+  const navigate = useNavigate();
 
   const loadMenu = async () => {
     setLoading(true);
@@ -129,6 +130,29 @@ export default function Menu() {
             </button>
           ))}
         </div>
+      </div>
+
+      {/* ======== 🆕 智能推荐入口 ======== */}
+      <div className="max-w-4xl mx-auto px-4 pt-4">
+        <button
+          onClick={() => navigate("/")}
+          className="w-full bg-gradient-to-r from-orange-400 to-red-400
+                     text-white rounded-2xl px-6 py-4
+                     flex items-center justify-center gap-3
+                     shadow-lg shadow-orange-200/50
+                     hover:shadow-xl hover:shadow-orange-200/60
+                     hover:-translate-y-0.5
+                     active:scale-[0.98]
+                     transition-all duration-200
+                     group"
+        >
+          <span className="text-3xl group-hover:animate-bounce">🎯</span>
+          <div className="text-left">
+            <div className="font-extrabold text-lg">智能推荐今日搭配</div>
+            <div className="text-sm text-white/80">根据你的口味和预算，一键生成套餐</div>
+          </div>
+          <span className="text-lg ml-2 group-hover:translate-x-1 transition-transform">→</span>
+        </button>
       </div>
 
       {/* 菜品列表 */}
