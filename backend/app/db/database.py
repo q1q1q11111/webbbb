@@ -7,23 +7,31 @@ USE_POSTGRESQL = DATABASE_URL.startswith("postgresql://")
 
 
 class AsyncpgCursor:
-    def __init__(self, conn, sql: str, params: tuple, auto_execute: bool = False):
+    """统一的 cursor 包装器，同时支持 SELECT 和 INSERT/UPDATE/DELETE"""
+
+    def __init__(self, conn, sql: str, params: tuple):
         self._conn = conn
         self._sql = sql
         self._params = params
         self._rows: List[Any] = []
         self._pos = 0
-        self._executed = auto_execute  # ← 关键：非SELECT已提前执行
+        self._executed = False
 
-    async def _ensure_executed(self):
+    async def execute_now(self):
+        """立即执行 SQL（用于 commit 时批量刷新）"""
         if not self._executed:
-            if self._sql.strip().upper().startswith("SELECT") or \
-               self._sql.strip().upper().startswith("WITH") or \
-               "RETURNING" in self._sql.upper():
+            if self._is_query():
                 self._rows = await self._conn.fetch(self._sql, *self._params)
             else:
                 await self._conn.execute(self._sql, *self._params)
             self._executed = True
+
+    async def _ensure_executed(self):
+        await self.execute_now()
+
+    def _is_query(self) -> bool:
+        upper = self._sql.strip().upper()
+        return upper.startswith("SELECT") or upper.startswith("WITH") or "RETURNING" in upper
 
     async def fetchone(self) -> Optional[Any]:
         await self._ensure_executed()
@@ -43,6 +51,7 @@ class DBConnection:
         self._conn = None
         self._is_postgres = USE_POSTGRESQL
         self._sqlite_conn = None
+        self._pending_writes: List[AsyncpgCursor] = []
         self.row_factory = None
         self.lastrowid = None
 
@@ -69,29 +78,25 @@ class DBConnection:
     def execute(self, sql: str, params: tuple = ()) -> AsyncpgCursor:
         if self._is_postgres:
             converted_sql = self._convert_placeholders(sql)
-            # 判断是否为查询语句
-            upper_sql = converted_sql.strip().upper()
-            is_query = upper_sql.startswith("SELECT") or \
-                       upper_sql.startswith("WITH") or \
-                       "RETURNING" in upper_sql
-            if is_query:
-                return AsyncpgCursor(self._conn, converted_sql, params, auto_execute=False)
-            else:
-                # INSERT/UPDATE/DELETE: 立即执行
-                cursor = AsyncpgCursor(self._conn, converted_sql, params, auto_execute=True)
-                import asyncio
-                # 同步执行 INSERT/UPDATE/DELETE
-                loop = asyncio.get_event_loop()
-                loop.create_task(cursor._ensure_executed())
-                return cursor
+            cursor = AsyncpgCursor(self._conn, converted_sql, params)
+            # SELECT 查询：延迟执行（fetchone/fetchall 时执行）
+            # INSERT/UPDATE/DELETE：放入待执行队列，commit 时批量执行
+            if not cursor._is_query():
+                self._pending_writes.append(cursor)
+            return cursor
         else:
-            # SQLite 模式
             import asyncio
-            cursor = asyncio.run(self._sqlite_conn.execute(sql, params))
-            return SQLiteCursorWrapper(cursor)
+            coro = self._sqlite_conn.execute(sql, params)
+            loop = asyncio.get_event_loop()
+            return SQLiteCursorWrapper(coro)
 
     async def commit(self):
-        if not self._is_postgres:
+        if self._is_postgres:
+            # ⭐ 执行所有待处理的 INSERT/UPDATE/DELETE
+            for cursor in self._pending_writes:
+                await cursor.execute_now()
+            self._pending_writes.clear()
+        else:
             await self._sqlite_conn.commit()
 
     def _convert_placeholders(self, sql: str) -> str:
@@ -118,13 +123,26 @@ class DBConnection:
 
 
 class SQLiteCursorWrapper:
-    def __init__(self, cursor):
-        self._cursor = cursor
+    def __init__(self, coro):
+        self._coro = coro
+        self._cursor = None
+        self._lastrowid = None
+
+    async def _ensure(self):
+        if self._cursor is None:
+            self._cursor = await self._coro
+            self._lastrowid = self._cursor.lastrowid
+
+    @property
+    def lastrowid(self):
+        return self._lastrowid
 
     async def fetchone(self):
+        await self._ensure()
         return await self._cursor.fetchone()
 
     async def fetchall(self):
+        await self._ensure()
         return await self._cursor.fetchall()
 
 
@@ -184,4 +202,3 @@ async def _init_postgresql():
                         await conn.execute(stmt)
     finally:
         await conn.close()
-
