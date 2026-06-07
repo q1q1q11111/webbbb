@@ -59,6 +59,8 @@ export const dishAPI = {
     api.get("/dish/list", { params }),
   canteens: () =>
     api.get("/dish/canteens"),
+  menu: (userId?: number) =>
+    api.get(`/dish/menu?user_id=${userId || 0}`),
   add: (dish: Omit<Dish, "id" | "canteen_name"> & { canteen_id: number }) =>
     api.post("/dish/add", dish),
   update: (dishId: number, dish: Partial<Omit<Dish, "id" | "canteen_name"> & { canteen_id?: number }>) =>
@@ -77,8 +79,14 @@ export const recommendAPI = {
 export const feedbackAPI = {
   like: (userId: number, dishId: number) =>
     api.post(`/feedback/like?user_id=${userId}&dish_id=${dishId}`),
+  unlike: (userId: number, dishId: number) =>
+    api.delete(`/feedback/unlike?user_id=${userId}&dish_id=${dishId}`),
   skip: (userId: number, dishId: number) =>
     api.post(`/feedback/skip?user_id=${userId}&dish_id=${dishId}`),
+  likedDishes: (userId: number) =>
+    api.get(`/feedback/liked_dishes?user_id=${userId}`),
+  dishLikeCount: (dishId: number) =>
+    api.get(`/feedback/dish_like_count?dish_id=${dishId}`),
 };
 
 export default api;
