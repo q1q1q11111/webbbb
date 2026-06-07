@@ -1,8 +1,20 @@
 from fastapi import APIRouter, Depends
+from pydantic import BaseModel
 from app.db.database import get_db
 from app.algorithms.recommender import recommend_for_user
 
 router = APIRouter()
+
+class HistoryIn(BaseModel):
+    user_id: int
+    dish_ids: str
+    total_price: float
+    total_calories: int
+    total_protein: float
+    total_fat: float = 0
+    total_carbs: float = 0
+    score: float = 0
+
 
 @router.get("/for_user")
 async def get_recommendation(
@@ -20,22 +32,14 @@ async def get_recommendation(
 
 
 @router.post("/save_history")
-async def save_history(
-    user_id: int,
-    dish_ids: str,
-    total_price: float,
-    total_calories: int,
-    total_protein: float,
-    total_fat: float = 0,
-    total_carbs: float = 0,
-    score: float = 0,
-    db = Depends(get_db)
-):
+async def save_history(payload: HistoryIn, db = Depends(get_db)):
     await db.execute(
         """INSERT INTO recommendation_history
            (user_id, dish_ids, total_price, total_calories, total_protein, total_fat, total_carbs, score)
            VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
-        (user_id, dish_ids, total_price, total_calories, total_protein, total_fat, total_carbs, score)
+        (payload.user_id, payload.dish_ids, payload.total_price,
+         payload.total_calories, payload.total_protein,
+         payload.total_fat, payload.total_carbs, payload.score)
     )
     await db.commit()
     return {"success": True}
