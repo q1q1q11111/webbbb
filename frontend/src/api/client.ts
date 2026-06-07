@@ -74,7 +74,7 @@ export const recommendAPI = {
     api.get(`/recommend/for_user?user_id=${userId}&budget=${budget || 0}`),
   history: (userId: number) =>
     api.get(`/recommend/history?user_id=${userId}`),
-  saveHistory: (params: {
+  saveHistory: (data: {
     user_id: number;
     dish_ids: string;
     total_price: number;
@@ -84,7 +84,7 @@ export const recommendAPI = {
     total_carbs?: number;
     score?: number;
   }) =>
-    api.post("/recommend/save_history", null, { params }),
+    api.post("/recommend/save_history", data),
 };
 
 export const feedbackAPI = {
